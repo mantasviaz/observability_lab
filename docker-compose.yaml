@@ -1,0 +1,37 @@
+services:
+  app:
+    build: .
+    container_name: observability-app
+    environment:
+      - OTEL_EXPORTER_OTLP_ENDPOINT=grpc://agent:4317
+      - OTEL_EXPORTER_OTLP_PROTOCOL=grpc
+      - OTEL_SERVICE_NAME=observability-lab
+      - DEPLOY_ENV=dev
+    depends_on:
+      - agent
+    ports:
+      - "8000:8000"
+    command: sh -c "sleep 5 && gunicorn -b 0.0.0.0:8000 app:app"
+
+  agent:
+    image: datadog/agent:latest
+    container_name: agent
+    environment:
+      - DD_API_KEY=${DD_API_KEY}
+      - DD_SITE=${DD_SITE:-datadoghq.com}
+      - DD_APM_ENABLED=true
+      - DD_APM_NON_LOCAL_TRAFFIC=true
+      - DD_LOGS_ENABLED=true
+      - DD_LOGS_CONFIG_CONTAINER_COLLECT_ALL=true
+      - DD_OTLP_CONFIG_RECEIVER_PROTOCOLS_GRPC=true
+      - DD_OTLP_CONFIG_RECEIVER_PROTOCOLS_HTTP=true
+      - DD_OTLP_CONFIG_RECEIVER_HOST=0.0.0.0
+    ports:
+      - "8126:8126"
+      - "4317:4317"
+      - "4318:4318"
+      - "8125:8125/udp"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /proc/:/host/proc/:ro
+      - /sys/fs/cgroup:/host/sys/fs/cgroup:ro
